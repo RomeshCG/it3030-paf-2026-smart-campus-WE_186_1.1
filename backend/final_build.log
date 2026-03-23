@@ -1,0 +1,23 @@
+﻿[INFO] Scanning for projects...
+[INFO] 
+[INFO] ---------< lk.sliit.it3030.group186_1.1:smart-campus-backend >----------
+[INFO] Building  0.0.1-SNAPSHOT
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- clean:3.4.1:clean (default-clean) @ smart-campus-backend ---
+[INFO] Deleting C:\Users\sithu\Desktop\spring\it3030-paf-2026-smart-campus-WE_186_1.1\backend\target
+[INFO] 
+[INFO] --- resources:3.3.1:resources (default-resources) @ smart-campus-backend ---
+[INFO] Copying 1 resource from src\main\resources to target\classes
+[INFO] Copying 0 resource from src\main\resources to target\classes
+[INFO] 
+[INFO] --- compiler:3.14.1:compile (default-compile) @ smart-campus-backend ---
+[INFO] Recompiling the module because of changed source code.
+[INFO] Compiling 10 source files with javac [debug parameters release 21] to target\classes
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  2.781 s
+[INFO] Finished at: 2026-03-23T22:54:36+05:30
+[INFO] ------------------------------------------------------------------------

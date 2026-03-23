@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { type ResourceDTO, ResourceTypes, ResourceStatuses } from '../types/resource';
 import { getResources, deleteResource } from '../api/resourceApi';
 import { ResourceForm } from './ResourceForm';
-import { Plus, Edit2, Trash2, MapPin, Users, Activity, RefreshCw, Layers } from 'lucide-react';
+import { ResourceDetails } from './ResourceDetails';
+import { Plus, Edit2, Trash2, MapPin, Users, Activity, RefreshCw, Layers, Eye, Download } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export const ResourceList: React.FC = () => {
@@ -20,8 +21,10 @@ export const ResourceList: React.FC = () => {
   // Modals
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingResource, setEditingResource] = useState<ResourceDTO | undefined>();
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const [selectedResource, setSelectedResource] = useState<ResourceDTO | undefined>();
 
-  const fetchResources = async () => {
+  const fetchResources = useCallback(async () => {
     setLoading(true);
     try {
       const data = await getResources({
@@ -34,15 +37,16 @@ export const ResourceList: React.FC = () => {
       setResources(data.content);
       setTotalPages(data.totalPages);
     } catch (err) {
+      console.error('Error fetching resources:', err);
       toast.error('Failed to load resources.');
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, size, typeFilter, statusFilter, capacityFilter]);
 
   useEffect(() => {
     fetchResources();
-  }, [page, typeFilter, statusFilter, capacityFilter]);
+  }, [fetchResources]);
 
   const handleDelete = async (id?: number) => {
     if (!id || !window.confirm('Are you sure you want to delete this resource?')) return;
@@ -51,6 +55,7 @@ export const ResourceList: React.FC = () => {
       toast.success('Resource deleted securely.');
       fetchResources();
     } catch (err) {
+      console.error('Error deleting resource:', err);
       toast.error('Failed to delete resource.');
     }
   };
@@ -63,6 +68,11 @@ export const ResourceList: React.FC = () => {
   const handleCreate = () => {
     setEditingResource(undefined);
     setIsFormOpen(true);
+  };
+
+  const handleViewDetails = (resource: ResourceDTO) => {
+    setSelectedResource(resource);
+    setIsDetailsOpen(true);
   };
 
   const handleFormSuccess = () => {
@@ -164,18 +174,34 @@ export const ResourceList: React.FC = () => {
               </div>
             </div>
 
-            <div className="card-actions">
+            <div className="card-actions" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+              <button 
+                className="btn btn-primary" 
+                style={{ gridColumn: 'span 2', padding: '0.6rem' }}
+                onClick={() => handleViewDetails(res)}
+              >
+                <Eye size={16} /> View Details
+              </button>
+              {res.downloadUrl && (
+                <button 
+                  className="btn btn-secondary" 
+                  style={{ gridColumn: 'span 2', padding: '0.6rem', background: 'var(--success)', border: 'none' }}
+                  onClick={(e) => { e.stopPropagation(); window.open(res.downloadUrl, '_blank'); }}
+                >
+                  <Download size={16} /> Fast Download
+                </button>
+              )}
               <button 
                 className="btn btn-secondary" 
-                style={{ flex: 1, padding: '0.5rem' }}
-                onClick={() => handleEdit(res)}
+                style={{ padding: '0.5rem' }}
+                onClick={(e) => { e.stopPropagation(); handleEdit(res); }}
               >
                 <Edit2 size={16} /> Edit
               </button>
               <button 
                 className="btn btn-danger" 
-                style={{ flex: 1, padding: '0.5rem' }}
-                onClick={() => handleDelete(res.id)}
+                style={{ padding: '0.5rem' }}
+                onClick={(e) => { e.stopPropagation(); handleDelete(res.id); }}
               >
                 <Trash2 size={16} /> Delete
               </button>
@@ -205,12 +231,19 @@ export const ResourceList: React.FC = () => {
         </div>
       )}
 
-      {/* Modal */}
+      {/* Modals */}
       {isFormOpen && (
         <ResourceForm 
           resource={editingResource} 
           onClose={() => setIsFormOpen(false)} 
           onSuccess={handleFormSuccess} 
+        />
+      )}
+
+      {isDetailsOpen && selectedResource && (
+        <ResourceDetails 
+          resource={selectedResource} 
+          onClose={() => setIsDetailsOpen(false)} 
         />
       )}
     </div>

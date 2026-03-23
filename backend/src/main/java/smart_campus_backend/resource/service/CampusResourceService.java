@@ -25,6 +25,17 @@ public class CampusResourceService {
         return resources.map(this::convertToDTO);
     }
 
+    public ResourceDTO getResourceById(Long id) {
+        CampusResource resource = repository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Resource not found"));
+        
+        if (resource.isDeleted()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Resource not found");
+        }
+        
+        return convertToDTO(resource);
+    }
+
     public ResourceDTO createResource(ResourceDTO dto) {
         CampusResource resource = new CampusResource();
         mapDtoToEntity(dto, resource);
@@ -61,6 +72,8 @@ public class CampusResourceService {
         entity.setLocation(dto.getLocation());
         entity.setStatus(dto.getStatus());
         entity.setImageUrl(dto.getImageUrl());
+        entity.setDescription(dto.getDescription());
+        entity.setDownloadUrl(dto.getDownloadUrl());
     }
 
     private ResourceDTO convertToDTO(CampusResource entity) {
@@ -72,6 +85,8 @@ public class CampusResourceService {
         dto.setLocation(entity.getLocation());
         dto.setStatus(entity.getStatus());
         dto.setImageUrl(entity.getImageUrl());
+        dto.setDescription(entity.getDescription());
+        dto.setDownloadUrl(entity.getDownloadUrl());
         return dto;
     }
 }

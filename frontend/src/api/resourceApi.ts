@@ -16,6 +16,11 @@ export const getResources = async (params: {
   return data;
 };
 
+export const getResourceById = async (id: number) => {
+  const { data } = await axios.get<ResourceDTO>(`${API_URL}/${id}`);
+  return data;
+};
+
 export const createResource = async (resource: ResourceDTO) => {
   const { data } = await axios.post<ResourceDTO>(API_URL, resource);
   return data;

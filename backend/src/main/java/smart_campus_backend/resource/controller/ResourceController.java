@@ -41,6 +41,11 @@ public class ResourceController {
         return ResponseEntity.ok(service.getResources(type, status, capacity, pageable));
     }
 
+    @GetMapping("/{id}")
+    public ResponseEntity<ResourceDTO> getResourceById(@PathVariable Long id) {
+        return ResponseEntity.ok(service.getResourceById(id));
+    }
+
     @PostMapping
     public ResponseEntity<ResourceDTO> createResource(@Valid @RequestBody ResourceDTO dto) {
         ResourceDTO created = service.createResource(dto);

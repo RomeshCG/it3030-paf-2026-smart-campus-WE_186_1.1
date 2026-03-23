@@ -17,7 +17,9 @@ export const ResourceForm: React.FC<Props> = ({ resource, onClose, onSuccess }) 
     capacity: 10,
     location: '',
     status: ResourceStatuses.ACTIVE,
-    imageUrl: ''
+    imageUrl: '',
+    description: '',
+    downloadUrl: ''
   });
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -51,8 +53,9 @@ export const ResourceForm: React.FC<Props> = ({ resource, onClose, onSuccess }) 
         toast.success('Resource added successfully!');
       }
       onSuccess();
-    } catch (err: any) {
-      toast.error('Failed to save resource. ' + (err.response?.data?.error || ''));
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { error?: string } } };
+      toast.error('Failed to save resource. ' + (error.response?.data?.error || ''));
     } finally {
       setLoading(false);
     }
@@ -151,6 +154,31 @@ export const ResourceForm: React.FC<Props> = ({ resource, onClose, onSuccess }) 
               value={formData.imageUrl || ''}
               onChange={handleChange}
               placeholder="https://example.com/image.jpg"
+            />
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">Description (Optional)</label>
+            <textarea
+              name="description"
+              className="form-control"
+              value={formData.description || ''}
+              onChange={(e) => setFormData(p => ({ ...p, description: e.target.value }))}
+              placeholder="Enter resource description..."
+              rows={3}
+              style={{ background: 'var(--bg-primary)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '0.75rem', width: '100%' }}
+            />
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">Download/Document URL (Optional)</label>
+            <input
+              type="text"
+              name="downloadUrl"
+              className="form-control"
+              value={formData.downloadUrl || ''}
+              onChange={handleChange}
+              placeholder="https://example.com/resource.pdf"
             />
           </div>
 

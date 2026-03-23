@@ -21,6 +21,8 @@ export interface ResourceDTO {
   location: string;
   status: ResourceStatus;
   imageUrl?: string;
+  description?: string;
+  downloadUrl?: string;
 }
 
 export interface PageResponse<T> {
