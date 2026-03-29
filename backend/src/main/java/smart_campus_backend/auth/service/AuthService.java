@@ -15,6 +15,7 @@ import smart_campus_backend.auth.dto.AuthResponse;
 import smart_campus_backend.auth.dto.LoginRequest;
 import smart_campus_backend.auth.dto.RegisterRequest;
 import smart_campus_backend.auth.entity.AuthProvider;
+import smart_campus_backend.auth.entity.Role;
 import smart_campus_backend.auth.entity.User;
 import smart_campus_backend.auth.repository.UserRepository;
 import smart_campus_backend.auth.security.CustomUserDetailsService;
@@ -46,7 +47,7 @@ public class AuthService {
                 .email(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))
                 .provider(AuthProvider.LOCAL)
-                .role("ROLE_USER")
+                .role(Role.USER)
                 .build();
 
         userRepository.save(user);
@@ -58,7 +59,7 @@ public class AuthService {
                 .token(token)
                 .name(user.getName())
                 .email(user.getEmail())
-                .role(user.getRole())
+                .role(user.getRole().name())
                 .build();
     }
 
@@ -78,7 +79,7 @@ public class AuthService {
                 .token(token)
                 .name(user.getName())
                 .email(user.getEmail())
-                .role(user.getRole())
+                .role(user.getRole().name())
                 .build();
     }
 
@@ -112,7 +113,7 @@ public class AuthService {
                         .email(email)
                         .provider(AuthProvider.GOOGLE)
                         .providerId(sub)
-                        .role("ROLE_USER")
+                        .role(Role.USER)
                         .build()
         );
 
@@ -129,7 +130,7 @@ public class AuthService {
                 .token(token)
                 .name(user.getName())
                 .email(user.getEmail())
-                .role(user.getRole())
+                .role(user.getRole().name())
                 .build();
     }
 }

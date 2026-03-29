@@ -6,41 +6,39 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
+
 @Entity
-@Table(name = "users")
+@Table(name = "admin_invites")
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class User {
+public class AdminInvite {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @Column(nullable = false)
-    private String name;
-
-    @Column(nullable = false, unique = true)
     private String email;
 
-    // Nullable — Google OAuth users have no local password
-    private String password;
+    @Column(nullable = false, unique = true)
+    private String token;
 
     @Column(nullable = false)
-    @Builder.Default
     @Convert(converter = RoleConverter.class)
-    private Role role = Role.USER;
+    @Builder.Default
+    private Role targetRole = Role.ADMIN;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     @Builder.Default
-    private AuthProvider provider = AuthProvider.LOCAL;
+    private InviteStatus status = InviteStatus.PENDING;
 
     @Column(nullable = false)
-    @Builder.Default
-    private boolean enabled = true;
+    private LocalDateTime createdAt;
 
-    // Stores the Google sub (subject) ID for OAuth users
-    private String providerId;
+    @Column(nullable = false)
+    private LocalDateTime expiresAt;
 }
