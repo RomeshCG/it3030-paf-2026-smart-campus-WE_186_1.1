@@ -1,251 +1,260 @@
+import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import api from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
-import { useNavigate, Link } from 'react-router-dom';
+import { AppSidebar } from '@/components/app-sidebar';
 import { Button } from '@/components/ui/button';
-import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { 
-  LayoutDashboard, 
-  BookOpen, 
-  Calendar, 
-  Settings, 
-  LogOut, 
-  Bell, 
-  Search,
-  GraduationCap,
-  Users,
-  Clock,
-  TrendingUp,
-  MoreVertical
-} from 'lucide-react';
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuLabel, 
-  DropdownMenuSeparator, 
-  DropdownMenuTrigger 
-} from '@/components/ui/dropdown-menu';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
+import { Bell, MoreHorizontal } from 'lucide-react';
+
+const ROLE_OPTIONS = ['USER', 'ADMIN', 'TECHNICIAN', 'SUPER_ADMIN'];
 
 export default function DashboardPage() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const role = user?.role ?? 'USER';
+  const isSuperAdmin = role === 'SUPER_ADMIN';
+
+  const [activePage, setActivePage] = useState(isSuperAdmin ? 'user-management' : 'dashboard');
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [search, setSearch] = useState('');
+  const [roleFilter, setRoleFilter] = useState('ALL');
+  const [statusFilter, setStatusFilter] = useState('ALL');
+
+  useEffect(() => {
+    if (!isSuperAdmin) {
+      setActivePage('dashboard');
+      return;
+    }
+    if (!['user-management', 'admin-management', 'super-admin-management', 'settings'].includes(activePage)) {
+      setActivePage('user-management');
+    }
+  }, [activePage, isSuperAdmin]);
+
+  useEffect(() => {
+    if (!isSuperAdmin) return;
+    if (!['user-management', 'admin-management', 'super-admin-management'].includes(activePage)) return;
+    fetchUsers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isSuperAdmin, activePage, search, roleFilter, statusFilter]);
+
+  const fetchUsers = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const params = {};
+      if (activePage === 'admin-management') params.role = 'ADMIN';
+      if (activePage === 'super-admin-management') params.role = 'SUPER_ADMIN';
+      if (activePage === 'user-management' && roleFilter !== 'ALL') params.role = roleFilter;
+      if (statusFilter !== 'ALL') params.status = statusFilter;
+      if (search.trim()) params.search = search.trim();
+
+      const response = await api.get('/api/admin/users', { params });
+      setUsers(response.data ?? []);
+    } catch (err) {
+      setError(err?.response?.data?.message || 'Failed to load users');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleLogout = () => {
     logout();
     navigate('/login');
   };
 
-  const stats = [
-    { title: "Enrolled Courses", value: "6", icon: BookOpen, color: "text-blue-500", bg: "bg-blue-500/10" },
-    { title: "Attendance", value: "94%", icon: Clock, color: "text-emerald-500", bg: "bg-emerald-500/10" },
-    { title: "Total Credits", value: "48", icon: GraduationCap, color: "text-indigo-500", bg: "bg-indigo-500/10" },
-    { title: "Current GPA", value: "3.82", icon: TrendingUp, color: "text-amber-500", bg: "bg-amber-500/10" },
-  ];
+  const handleBanToggle = async (target) => {
+    try {
+      await api.patch(`/api/admin/users/${target.id}/ban`, { banned: target.enabled });
+      fetchUsers();
+    } catch (err) {
+      alert(err?.response?.data?.message || 'Failed to update user status');
+    }
+  };
+
+  const handleRoleChange = async (target, newRole) => {
+    try {
+      await api.patch(`/api/admin/users/${target.id}/role`, { role: newRole });
+      fetchUsers();
+    } catch (err) {
+      alert(err?.response?.data?.message || 'Failed to update role');
+    }
+  };
+
+  const handleDelete = async (target) => {
+    if (!window.confirm(`Delete ${target.name}? This cannot be undone.`)) return;
+    try {
+      await api.delete(`/api/admin/users/${target.id}`);
+      fetchUsers();
+    } catch (err) {
+      alert(err?.response?.data?.message || 'Failed to delete user');
+    }
+  };
+
+  const roleCounts = useMemo(
+    () =>
+      ROLE_OPTIONS.reduce((acc, current) => {
+        acc[current] = users.filter((item) => item.role === current).length;
+        return acc;
+      }, {}),
+    [users]
+  );
 
   return (
-    <div className="flex min-h-screen bg-slate-50 dark:bg-slate-950">
-      {/* Sidebar */}
-      <aside className="fixed left-0 top-0 hidden h-screen w-64 border-r border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-950 lg:block">
-        <div className="flex items-center gap-2 mb-10 px-2">
-          <div className="p-2 bg-indigo-600 rounded-lg">
-            <GraduationCap className="size-6 text-white" />
-          </div>
-          <span className="text-xl font-bold tracking-tight">Smart Campus</span>
-        </div>
-
-        <nav className="space-y-1">
-          <NavItem icon={LayoutDashboard} label="Dashboard" active />
-          <NavItem icon={BookOpen} label="My Courses" />
-          <NavItem icon={Calendar} label="Schedule" />
-          <NavItem icon={Users} label="Community" />
-          <div className="pt-4 pb-2">
-            <p className="px-3 text-xs font-semibold uppercase tracking-wider text-slate-400">Settings</p>
-          </div>
-          <NavItem icon={Settings} label="Preferences" />
-        </nav>
-
-        <div className="absolute bottom-8 left-0 w-full px-6">
-          <Button 
-            variant="ghost" 
-            className="w-full justify-start gap-3 text-slate-500 hover:text-destructive hover:bg-destructive/5"
-            onClick={handleLogout}
-          >
-            <LogOut className="size-5" />
-            Sign out
-          </Button>
-        </div>
-      </aside>
-
-      {/* Main Content */}
-      <main className="flex-1 lg:ml-64">
-        {/* Top Header */}
+    <SidebarProvider>
+      <AppSidebar
+        role={role}
+        activeNav={activePage}
+        onNavigate={setActivePage}
+        onLogout={handleLogout}
+        onSettings={() => setActivePage('settings')}
+      />
+      <SidebarInset>
         <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-slate-200 bg-white/80 px-8 backdrop-blur-md dark:border-slate-800 dark:bg-slate-950/80">
-          <div className="relative w-96 max-w-full hidden md:block">
-            <Search className="absolute left-3 top-2.5 size-4 text-slate-400" />
-            <input 
-              type="text" 
-              placeholder="Search courses, tasks, files..." 
-              className="w-full rounded-full border border-slate-200 bg-slate-50 py-2 pl-10 pr-4 text-sm outline-none transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 dark:border-slate-800 dark:bg-slate-900"
-            />
+          <div className="flex items-center gap-3">
+            <SidebarTrigger />
+            <h1 className="text-xl font-semibold">
+            {activePage === 'user-management' && 'User Management'}
+            {activePage === 'admin-management' && 'Admin Management'}
+            {activePage === 'super-admin-management' && 'Super Admin Management'}
+            {activePage === 'settings' && 'System Settings'}
+            {activePage === 'dashboard' && 'Dashboard'}
+            </h1>
           </div>
-
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" className="relative text-slate-500">
-              <Bell className="size-5" />
-              <span className="absolute right-2 top-2 size-2 rounded-full bg-destructive border-2 border-white dark:border-slate-950" />
-            </Button>
-            
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="h-10 gap-3 px-2 hover:bg-slate-100 dark:hover:bg-slate-900 text-left">
-                  <Avatar className="size-8 border border-slate-200 dark:border-slate-800">
-                    <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.name}`} />
-                    <AvatarFallback>{user?.name?.charAt(0)}</AvatarFallback>
-                  </Avatar>
-                  <div className="hidden sm:block">
-                    <p className="text-sm font-semibold leading-none">{user?.name}</p>
-                    <p className="text-xs text-slate-400 mt-1 capitalize">{user?.role}</p>
-                  </div>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuLabel>My Account</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem>Profile Settings</DropdownMenuItem>
-                <DropdownMenuItem>Academic Records</DropdownMenuItem>
-                <DropdownMenuItem>Billing</DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={handleLogout}>
-                  Logout
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+          <Button variant="ghost" size="icon" className="relative text-slate-500">
+            <Bell className="size-5" />
+          </Button>
         </header>
 
-        {/* Dashboard Content */}
-        <div className="p-8 pb-12">
-          {/* Welcome Section */}
-          <div className="mb-10">
-            <h1 className="text-3xl font-bold tracking-tight">Morning, {user?.name?.split(' ')[0]} 👋</h1>
-            <p className="text-slate-500 mt-1">Here's what happening with your studies today.</p>
-          </div>
+        <div className="p-8">
+          {activePage === 'settings' ? (
+            <Card>
+              <CardHeader>
+                <CardTitle>System Settings</CardTitle>
+                <CardDescription>Future configuration area for global system controls.</CardDescription>
+              </CardHeader>
+            </Card>
+          ) : isSuperAdmin && ['user-management', 'admin-management', 'super-admin-management'].includes(activePage) ? (
+            <>
+              {activePage === 'user-management' && (
+                <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-4">
+                  {ROLE_OPTIONS.map((currentRole) => (
+                    <Card key={currentRole}>
+                      <CardHeader className="pb-2">
+                        <CardDescription>{currentRole} count</CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <CardTitle className="text-2xl">{roleCounts[currentRole] || 0}</CardTitle>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
 
-          {/* Stats Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
-            {stats.map((stat, i) => (
-              <Card key={i} className="border-slate-200/60 dark:border-slate-800 shadow-sm transition-all hover:shadow-md">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className={`p-2 rounded-lg ${stat.bg}`}>
-                      <stat.icon className={`size-5 ${stat.color}`} />
-                    </div>
-                    <Button variant="ghost" size="icon" className="size-7">
-                      <MoreVertical className="size-4 text-slate-400" />
-                    </Button>
-                  </div>
+              <Card>
+                <CardHeader className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                   <div>
-                    <CardTitle className="text-3xl font-bold tracking-tight mb-1">{stat.value}</CardTitle>
-                    <CardDescription className="text-slate-500 font-medium">{stat.title}</CardDescription>
+                    <CardTitle>
+                      {activePage === 'user-management' ? 'All Registered Users' : activePage === 'admin-management' ? 'Admins' : 'Super Admins'}
+                    </CardTitle>
+                    <CardDescription>Manage account status, roles, and lifecycle.</CardDescription>
                   </div>
+                  <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row">
+                    <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search by name or email" className="md:w-72" />
+                    {activePage === 'user-management' && (
+                      <select className="rounded-md border border-input bg-background px-3 py-2" value={roleFilter} onChange={(event) => setRoleFilter(event.target.value)}>
+                        <option value="ALL">All Roles</option>
+                        {ROLE_OPTIONS.map((option) => (
+                          <option key={option} value={option}>
+                            {option}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                    <select className="rounded-md border border-input bg-background px-3 py-2" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
+                      <option value="ALL">All Status</option>
+                      <option value="ACTIVE">Active</option>
+                      <option value="BANNED">Banned</option>
+                    </select>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {error && <p className="mb-3 text-sm text-destructive">{error}</p>}
+                  {loading ? (
+                    <p className="text-sm text-slate-500">Loading users...</p>
+                  ) : (
+                    <table className="w-full border-collapse text-left text-sm">
+                      <thead>
+                        <tr className="border-b">
+                          <th className="py-2">Name</th>
+                          <th className="py-2">Email</th>
+                          <th className="py-2">Role</th>
+                          <th className="py-2">Status</th>
+                          <th className="py-2">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {users.map((item) => (
+                          <tr key={item.id} className="border-b border-slate-100 dark:border-slate-800">
+                            <td className="py-2">{item.name}</td>
+                            <td className="py-2">{item.email}</td>
+                            <td className="py-2">
+                              <Badge variant="outline">{item.role}</Badge>
+                            </td>
+                            <td className="py-2">
+                              <Badge variant={item.enabled ? 'secondary' : 'destructive'}>
+                                {item.enabled ? 'ACTIVE' : 'BANNED'}
+                              </Badge>
+                            </td>
+                            <td className="py-2">
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="outline" size="icon">
+                                    <MoreHorizontal className="size-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                  <DropdownMenuItem onClick={() => handleBanToggle(item)}>
+                                    {item.enabled ? 'Ban User' : 'Unban User'}
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator />
+                                  {ROLE_OPTIONS.map((option) => (
+                                    <DropdownMenuItem key={`${item.id}-${option}`} onClick={() => handleRoleChange(item, option)}>
+                                      Set role: {option}
+                                    </DropdownMenuItem>
+                                  ))}
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(item)}>
+                                    Delete User
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
                 </CardContent>
               </Card>
-            ))}
-          </div>
-
-          {/* Tabs Section */}
-          <Tabs defaultValue="overview" className="space-y-6">
-            <div className="flex items-center justify-between">
-              <TabsList className="bg-slate-100 dark:bg-slate-900">
-                <TabsTrigger value="overview">Overview</TabsTrigger>
-                <TabsTrigger value="courses">My Courses</TabsTrigger>
-                <TabsTrigger value="schedule">Schedule</TabsTrigger>
-              </TabsList>
-              <Button className="hidden sm:flex bg-indigo-600 hover:bg-indigo-700">Add New Module</Button>
-            </div>
-
-            <TabsContent value="overview" className="space-y-6">
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {/* Recent Activity */}
-                <Card className="lg:col-span-2 border-slate-200/60 dark:border-slate-800 shadow-sm">
-                  <CardHeader>
-                    <CardTitle>Recent Performance</CardTitle>
-                    <CardDescription>Your quiz and assignment grades over the last 30 days.</CardDescription>
-                  </CardHeader>
-                  <CardContent className="h-64 flex items-center justify-center text-slate-400 border-t border-slate-50 dark:border-slate-900 mt-4">
-                    <div className="text-center">
-                      <LayoutDashboard className="size-10 mx-auto mb-2 opacity-20" />
-                      <p className="text-sm">Performance metrics chart will appear here.</p>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Upcoming Tasks */}
-                <Card className="border-slate-200/60 dark:border-slate-800 shadow-sm">
-                  <CardHeader>
-                    <CardTitle>Upcoming Tasks</CardTitle>
-                    <CardDescription>Don't miss these deadlines.</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4 pt-4">
-                    <TaskItem 
-                      title="Database Systems Quiz" 
-                      time="Today, 2:00 PM" 
-                      category="Academic" 
-                      color="bg-amber-500" 
-                    />
-                    <TaskItem 
-                      title="PAF Project Submission" 
-                      time="Tomorrow, 11:59 PM" 
-                      category="Project" 
-                      color="bg-indigo-500" 
-                    />
-                    <TaskItem 
-                      title="Web Security Workshop" 
-                      time="Friday, 10:00 AM" 
-                      category="Event" 
-                      color="bg-purple-500" 
-                    />
-                  </CardContent>
-                </Card>
-              </div>
-            </TabsContent>
-          </Tabs>
+            </>
+          ) : (
+            <Card>
+              <CardHeader>
+                <CardTitle>Welcome, {user?.name}</CardTitle>
+                <CardDescription>Standard dashboard placeholders for non-super-admin roles.</CardDescription>
+              </CardHeader>
+            </Card>
+          )}
         </div>
-      </main>
-    </div>
-  );
-}
-
-function NavItem({ icon: Icon, label, active = false }) {
-  return (
-    <Link 
-      to="#" 
-      className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
-        active 
-          ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-400' 
-          : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-slate-900 dark:hover:text-slate-100'
-      }`}
-    >
-      <Icon className={`size-5 ${active ? 'text-indigo-600 dark:text-indigo-400' : ''}`} />
-      {label}
-    </Link>
-  );
-}
-
-function TaskItem({ title, time, category, color }) {
-  return (
-    <div className="flex items-center justify-between p-3 rounded-xl border border-slate-100 dark:border-slate-900 hover:bg-slate-50 dark:hover:bg-cyan-900/5 transition-colors cursor-pointer">
-      <div className="flex items-center gap-3">
-        <div className={`size-2 rounded-full ${color}`} />
-        <div>
-          <p className="text-sm font-semibold">{title}</p>
-          <p className="text-xs text-slate-400">{time}</p>
-        </div>
-      </div>
-      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-900">
-        {category}
-      </span>
-    </div>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }
